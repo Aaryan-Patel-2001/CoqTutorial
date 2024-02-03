@@ -1,0 +1,95 @@
+image: ralfjung/opam-ci:opam2
+
+stages:
+  - build
+
+variables:
+  CPU_CORES: "10"
+  OCAML: "ocaml-variants.4.14.0+options ocaml-option-flambda"
+  # Avoid needlessly increasing our TCB with native_compute
+  COQEXTRAFLAGS: "-native-compiler no"
+
+.only_branches: &only_branches
+  only:
+  - /^master/@iris/iris
+  - /^ci/@iris/iris
+
+.only_mr: &only_mr
+  only:
+  - merge_requests
+
+.branches_and_mr: &branches_and_mr
+  only:
+  - /^master/@iris/iris
+  - /^ci/@iris/iris
+  - merge_requests
+
+.template: &template
+  <<: *only_branches
+  stage: build
+  interruptible: true
+  tags:
+  - fp
+  script:
+  - git clone https://gitlab.mpi-sws.org/iris/ci.git ci -b opam2
+  - ci/buildjob
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+    - _opam/
+  except:
+  - triggers
+  - schedules
+  - api
+
+## Build jobs
+
+# The newest version runs with timing.
+build-coq.8.18.0:
+  <<: *template
+  variables:
+    OPAM_PINS: "coq version 8.18.0"
+    DENY_WARNINGS: "1"
+    MANGLE_NAMES: "1"
+    OPAM_PKG: "1"
+    DOC_DIR: "coqdoc@center.mpi-sws.org:iris"
+    DOC_OPTS: "--external https://plv.mpi-sws.org/coqdoc/stdpp/ stdpp"
+  tags:
+  - fp-timing
+  interruptible: false
+
+# The newest version also runs in MRs, without timing.
+build-coq.8.18.0-mr:
+  <<: *template
+  <<: *only_mr
+  variables:
+    OPAM_PINS: "coq version 8.18.0"
+    DENY_WARNINGS: "1"
+    MANGLE_NAMES: "1"
+
+build-coq.8.17.1:
+  <<: *template
+  variables:
+    OPAM_PINS: "coq version 8.17.1"
+    DENY_WARNINGS: "1"
+    MANGLE_NAMES: "1"
+
+# The oldest version runs in MRs, without name mangling.
+build-coq.8.16.1:
+  <<: *template
+  <<: *branches_and_mr
+  variables:
+    OPAM_PINS: "coq version 8.16.1"
+    DENY_WARNINGS: "1"
+
+trigger-stdpp.dev:
+  <<: *template
+  variables:
+    STDPP_REPO: "iris/stdpp"
+    OPAM_PINS: "coq version $NIGHTLY_COQ   git+https://gitlab.mpi-sws.org/$STDPP_REPO#$STDPP_REV"
+    CI_COQCHK: "1"
+  except:
+  only:
+  - triggers
+  - schedules
+  - api
