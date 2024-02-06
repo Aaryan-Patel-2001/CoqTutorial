@@ -92,11 +92,13 @@ Inductive Sorted : list Z -> Prop :=
     | Sorted_cons a l : Sorted l -> HdRel a l -> Sorted (a :: l).
 
 Lemma insert_proof l v (i:Z): 
-  {{{sort_spec l v}}}
+  {{{is_list l v}}}
   insert v #i 
   {{{RET #(); is_list (insert_func i l) v ∗ ⌜ Sorted (insert_func i l) ⌝ }}}.  
 Proof. 
   (* Proof *)
+  iIntros (Φ) "Hl Post".
+  iSplitL 
 
 Admitted. 
 
