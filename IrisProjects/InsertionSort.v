@@ -1,5 +1,6 @@
 From iris.heap_lang Require Import proofmode notation.
 From iris.unstable.heap_lang Require Import interpreter. 
+From stdpp Require Import sorting. 
 
 Definition comp : expr := 
  "x" ≤ "i". 
@@ -34,15 +35,17 @@ Definition sort : val :=
 
 Definition EmptyList : expr := 
   NONE. 
- 
-Section Test. 
+
+
+
+(* Section Test. 
 
 Theorem interpretTest : interpret 1000 ("l" = "EmptyList";; "insert" "l" "5") = ("5"). 
 Proof. 
   reflexivity. Qed. 
 
 
-End Test. 
+End Test.  *)
 
 Section proof.
 Context `{!heapGS Σ}.
@@ -55,12 +58,55 @@ Fixpoint is_list (l : list Z) (v : val) : iProp Σ :=
                  ∃ v' : val, p ↦ (#x, v') ∗ is_list l' v'
   end.
 
-Lemma sort_spec l v:
-  (* Precondition: A valid array of length v *)
+Fixpoint sort_spec (l : list Z) (v : val) : iProp Σ :=
+  match l with
+  | [] => True 
+  | x :: l' => ∃ (p : loc), ⌜ v = SOMEV #p ⌝ ∗
+               ∃ (n : Z), ⌜ v = #n ⌝ ∗
+                match l' with 
+                | [] => True 
+                | y :: l'' => ∃ v' : val, p ↦ (#x, v') ∗ 
+                ∃ (n' : Z), ⌜ v' = #n' ⌝ ∗
+                ⌜ (n ≤ n')%Z⌝ ∗ 
+                sort_spec l' v' 
+                end 
+  end. 
+
+(* Definition sorted (l: list Z) := ∀ i j,
+    i < j < length l →
+    nth i l 0 ≤ nth j l 0. *)
+Fixpoint insert_func (i : Z) (l : list Z) :=
+  match l with
+  | []  => [i]
+  | h :: t  => if (i <=? h)%Z then i :: h :: t else h :: insert_func i t
+  end.  
+
+Variable R : Z -> Z -> Prop.
+
+Inductive HdRel a : list Z -> Prop :=
+    | HdRel_nil : HdRel a []
+    | HdRel_cons b l : R a b -> HdRel a (b :: l).
+
+Inductive Sorted : list Z -> Prop :=
+    | Sorted_nil : Sorted []
+    | Sorted_cons a l : Sorted l -> HdRel a l -> Sorted (a :: l).
+
+Lemma insert_proof l v (i:Z): 
+  {{{sort_spec l v}}}
+  insert v #i 
+  {{{RET #(); is_list (insert_func i l) v ∗ ⌜ Sorted (insert_func i l) ⌝ }}}.  
+Proof. 
+  (* Proof *)
+
+Admitted. 
+
+Lemma sort_proof l v:
+  (* Precondition: A valid array with first element having value v *)
   {{{is_list l v}}}
-  sort l
-  {{{RET #();}}} 
+   sort v
+  {{{RET #(); ⌜Sorted l⌝}}}. 
 Proof. 
 
+Admitted. 
 
 End proof. 

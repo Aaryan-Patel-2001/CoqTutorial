@@ -165,7 +165,6 @@ Proof.
     eauto with iFrame.
 Qed.
 
-(* QUESTION: What is lob induction? *)
 
 
 
