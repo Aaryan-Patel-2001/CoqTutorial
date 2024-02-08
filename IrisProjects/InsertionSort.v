@@ -2,6 +2,8 @@ From iris.heap_lang Require Import proofmode notation.
 From iris.unstable.heap_lang Require Import interpreter. 
 From stdpp Require Import sorting. 
 
+Local Open Scope Z_scope.
+
 Definition comp : expr := 
  "x" ≤ "i". 
 
@@ -10,12 +12,12 @@ Definition comp : expr :=
 Definition insert : val := 
  rec: "insert" "i" "l" := 
   match: "l" with           (* A list is either... *)
-  NONE => ("i", "NONE")              (* ... the empty list *)
+  NONE => ("i", NONE)              (* ... the empty list *)
   | SOME "p" => 
    let: "x" := Fst !"p" in  (* First element *)
    let: "l2" := Snd !"p" in  (* Rest of the list *)
    match: "l2" with
-   NONE => (if: ("x" ≤ "i")%E then "p" <- ("i", ("x", "NONE")) else "p" <- ("x", ("i", "NONE")) )
+   NONE => (if: ("x" ≤ "i")%E then "p" <- ("i", ("x", NONE)) else "p" <- ("x", ("i", NONE)) )
    | SOME "l3" => 
     let: "y" := Fst !"l3" in  (* Second element *)
     (if: (("x" ≤ "i")%E  && ("i" ≤ "y"))%E then "p" <- ("x",  ("i"  "l") )
@@ -26,7 +28,7 @@ Definition insert : val :=
 Definition sort : val := 
  rec: "sort" "l" := 
   match: "l" with 
-  NONE => NONE
+  NONE => #()
   | SOME "p" =>
   let: "x" := Fst !"p" in 
   let: "l" := Snd !"p" in 
@@ -72,20 +74,24 @@ Fixpoint sort_spec (l : list Z) (v : val) : iProp Σ :=
                 end 
   end. 
 
-(* Definition sorted (l: list Z) := ∀ i j,
-    i < j < length l →
-    nth i l 0 ≤ nth j l 0. *)
+
 Fixpoint insert_func (i : Z) (l : list Z) :=
   match l with
   | []  => [i]
   | h :: t  => if (i <=? h)%Z then i :: h :: t else h :: insert_func i t
   end.  
 
+
+(* Definition sorted (l: list Z) := ∀ i j:nat,
+    i < j < length l →
+    (nth i l 0) ≤ (nth j l 0). *)
+
 Variable R : Z -> Z -> Prop.
 
 Inductive HdRel a : list Z -> Prop :=
     | HdRel_nil : HdRel a []
     | HdRel_cons b l : R a b -> HdRel a (b :: l).
+
 
 Inductive Sorted : list Z -> Prop :=
     | Sorted_nil : Sorted []
@@ -98,16 +104,23 @@ Lemma insert_proof l v (i:Z):
 Proof. 
   (* Proof *)
   iIntros (Φ) "Hl Post".
-  iSplitL 
-
+  wp_rec.
+  wp_pures.   
 Admitted. 
 
 Lemma sort_proof l v:
-  (* Precondition: A valid array with first element having value v *)
   {{{is_list l v}}}
    sort v
   {{{RET #(); ⌜Sorted l⌝}}}. 
 Proof. 
+  iIntros (Φ) "Hl Post".
+  iInduction l as [|x l] "IH" forall (v Φ); simpl.
+  - iDestruct "Hl" as %->.
+    wp_rec.
+    wp_pures.
+    iModIntro.  
+    iApply "Post".
+    iPureIntro.   
 
 Admitted. 
 
