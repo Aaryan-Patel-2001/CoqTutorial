@@ -4,9 +4,15 @@ From stdpp Require Import sorting.
 
 Local Open Scope Z_scope.
 
-Definition comp : expr := 
- "x" ≤ "i". 
+(** Heaplang -> Imperative 
+Coq -> Functional 
 
+Linked List: (value, pointer), where pointer points to the next element 
+
+l: Original list [v, l2] 
+l2: None or l3
+l3: Sub-list [y, l3]
+*)
 
 (* insert i into its sorted place in list l *)
 Definition insert : val := 
@@ -14,10 +20,10 @@ Definition insert : val :=
   match: "l" with           (* A list is either... *)
   NONE => ("i", NONE)              (* ... the empty list *)
   | SOME "p" => 
-   let: "x" := Fst !"p" in  (* First element *)
+   let: "x" := Fst !"p" in  (* First element - !e means  Load e%E *)
    let: "l2" := Snd !"p" in  (* Rest of the list *)
    match: "l2" with
-   NONE => (if: ("x" ≤ "i")%E then "p" <- ("i", ("x", NONE)) else "p" <- ("x", ("i", NONE)) )
+   NONE => (if: ("x" ≤ "i")%E then "p" <- ("x", ("i", NONE)) else "p" <- ("i", ("x", NONE)) )
    | SOME "l3" => 
     let: "y" := Fst !"l3" in  (* Second element *)
     (if: (("x" ≤ "i")%E  && ("i" ≤ "y"))%E then "p" <- ("x",  ("i"  "l") )
@@ -52,7 +58,7 @@ End Test.  *)
 Section proof.
 Context `{!heapGS Σ}.
 
- 
+ (* l stores a linked list with head value of v *)
 Fixpoint is_list (l : list Z) (v : val) : iProp Σ :=
   match l with
   | [] => ⌜ v = NONEV ⌝
@@ -60,6 +66,7 @@ Fixpoint is_list (l : list Z) (v : val) : iProp Σ :=
                  ∃ v' : val, p ↦ (#x, v') ∗ is_list l' v'
   end.
 
+(* l stores a sorted linked list with head value of v *)
 Fixpoint sort_spec (l : list Z) (v : val) : iProp Σ :=
   match l with
   | [] => True 
@@ -74,7 +81,7 @@ Fixpoint sort_spec (l : list Z) (v : val) : iProp Σ :=
                 end 
   end. 
 
-
+(* Coq level functional program *)
 Fixpoint insert_func (i : Z) (l : list Z) :=
   match l with
   | []  => [i]
@@ -86,17 +93,18 @@ Fixpoint insert_func (i : Z) (l : list Z) :=
     i < j < length l →
     (nth i l 0) ≤ (nth j l 0). *)
 
+(* Coq-level definition of Sorted from standard library modified to support integers Z *)
 Variable R : Z -> Z -> Prop.
 
 Inductive HdRel a : list Z -> Prop :=
     | HdRel_nil : HdRel a []
     | HdRel_cons b l : R a b -> HdRel a (b :: l).
 
-
 Inductive Sorted : list Z -> Prop :=
     | Sorted_nil : Sorted []
     | Sorted_cons a l : Sorted l -> HdRel a l -> Sorted (a :: l).
 
+(* list l is sorted. Insert i into the sorted list *)
 Lemma insert_proof l v (i:Z): 
   {{{is_list l v}}}
   insert v #i 
@@ -120,7 +128,17 @@ Proof.
     wp_pures.
     iModIntro.  
     iApply "Post".
-    iPureIntro.   
+    iPureIntro.
+    apply Sorted_nil.
+  - iDestruct "Hl" as (p) "[-> Hl]". iDestruct "Hl" as (v) "[Hp Hl]".
+    wp_rec.
+    wp_match.
+    wp_load. wp_proj. wp_let.
+    wp_load. wp_proj. wp_let. 
+     
+    iApply insert_proof. 
+             
+        
 
 Admitted. 
 
