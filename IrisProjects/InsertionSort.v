@@ -116,6 +116,7 @@ Proof.
   wp_pures.   
 Admitted. 
 
+
 Lemma sort_proof l v:
   {{{is_list l v}}}
    sort v
@@ -137,8 +138,6 @@ Proof.
     wp_load. wp_proj. wp_let. 
      
     iApply insert_proof. 
-             
-        
 
 Admitted. 
 
