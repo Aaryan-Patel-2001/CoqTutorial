@@ -112,23 +112,24 @@ Inductive Sorted : list Z -> Prop :=
     | Sorted_nil : Sorted []
     | Sorted_cons a l : Sorted l -> HdRel a l -> Sorted (a :: l).
 
-
-
 (* list l is sorted. Insert i into the sorted list *)
 
 Lemma insertTest l:
   {{{⌜ l = NONE ⌝}}}
-  insert #2 l 
+  insert #2 NONE 
   {{{v',RET v'; is_list [2] v'}}}.
 Proof.
    iIntros (Φ) "Hl Post".
    unfold insert.
    wp_pures.
 
-   (* wp_alloc l as "H". *)
+   wp_alloc g as "H".
    iModIntro.
    iApply "Post".
-   unfold is_list. 
+   unfold is_list.
+   iExists g.
+   iSplitR "H".
+   - iSimpl.      
    reflexivity.         
 
 
