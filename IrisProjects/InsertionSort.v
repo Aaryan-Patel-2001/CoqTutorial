@@ -12,13 +12,15 @@ Linked List: (value, pointer), where pointer points to the next element
 l: Original list [v, l2] 
 l2: None or l3
 l3: Sub-list [y, l3]
+
+ref ("i", ref ())
 *)
 
 (* insert i into its sorted place in list l *)
 Definition insert : val := 
  rec: "insert" "i" "l" := 
   match: "l" with           (* A list is either... *)
-  NONE => ("i", NONE)              (* ... the empty list *)
+  NONE => ref (SOME( "i", NONE) )             (* ... the empty list *)
   | SOME "p" => 
    let: "x" := Fst !"p" in  (* First element - !e means  Load e%E *)
    let: "l2" := Snd !"p" in  (* Rest of the list *)
@@ -41,8 +43,13 @@ Definition sort : val :=
   "insert" "x" "sort l"
   end. 
 
-Definition EmptyList : expr := 
-  NONE. 
+(* Definition EmptyList: Prop :=
+  rec: "EmptyList" "l" := 
+    match: "l" with 
+    NONE => True 
+    | SOME "p" => False
+    end.  *)
+ 
 
 
 
@@ -89,6 +96,7 @@ Fixpoint insert_func (i : Z) (l : list Z) :=
   end.  
 
 
+
 (* Definition sorted (l: list Z) := ∀ i j:nat,
     i < j < length l →
     (nth i l 0) ≤ (nth j l 0). *)
@@ -104,16 +112,47 @@ Inductive Sorted : list Z -> Prop :=
     | Sorted_nil : Sorted []
     | Sorted_cons a l : Sorted l -> HdRel a l -> Sorted (a :: l).
 
+
+
 (* list l is sorted. Insert i into the sorted list *)
+
+Lemma insertTest l:
+  {{{⌜ l = NONE ⌝}}}
+  insert #2 l 
+  {{{v',RET v'; is_list [2] v'}}}.
+Proof.
+   iIntros (Φ) "Hl Post".
+   unfold insert.
+   wp_pures.
+
+   (* wp_alloc l as "H". *)
+   iModIntro.
+   iApply "Post".
+   unfold is_list. 
+   reflexivity.         
+
+
+  Admitted. 
+
 Lemma insert_proof l v (i:Z): 
   {{{is_list l v}}}
-  insert v #i 
-  {{{RET #(); is_list (insert_func i l) v ∗ ⌜ Sorted (insert_func i l) ⌝ }}}.  
+  insert #i v
+  {{{v',RET v'; is_list (insert_func i l) v' ∗ ⌜ Sorted (insert_func i l) ⌝}}}.  
 Proof. 
   (* Proof *)
   iIntros (Φ) "Hl Post".
+  unfold insert.
   wp_rec.
-  wp_pures.   
+  wp_let.
+  unfold insert_func.
+
+  iInduction l as [|x l] "IH" forall (v Φ); simpl.
+  - iDestruct "Hl" as %->.
+     wp_pures. 
+     wp_alloc l as "H".
+     iModIntro.  
+     iApply "Post". 
+  (* - iDestruct "Hl" as (p) "[-> Hl]". iDestruct "Hl" as (v) "[Hp Hl]".  *)
 Admitted. 
 
 
@@ -135,8 +174,10 @@ Proof.
     wp_rec.
     wp_match.
     wp_load. wp_proj. wp_let.
-    wp_load. wp_proj. wp_let. 
-     
+    wp_load. wp_proj. wp_let.
+    wp_apply ("insert_proof" with )
+    wp_apply ("IH" with "Hl"). 
+    
     iApply insert_proof. 
 
 Admitted. 
