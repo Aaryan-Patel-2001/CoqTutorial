@@ -25,7 +25,7 @@ Definition insert : val :=
    let: "x" := Fst !"p" in  (* First element - !e means  Load e%E *)
    let: "l2" := Snd !"p" in  (* Rest of the list *)
    match: "l2" with
-   NONE => (if: ("x" ≤ "i")%E then "p" <- ref (SOME ("x", ("i", NONE))) else "p" <- ("i", ("x", NONE)) )
+   NONE => (if: ("x" ≤ "i")%E then "p" <- ref (SOME ("x", ref ( SOME ("i", NONE)) )) else "p" <- ref (SOME ("i", ref (SOME ("x", NONE)))) )
    | SOME "l3" => 
     let: "y" := Fst !"l3" in  (* Second element *)
     (if: (("x" ≤ "i")%E  && ("i" ≤ "y"))%E then "p" <- ("x",  ("i"  "l") )
@@ -151,7 +151,9 @@ Proof.
      wp_pures. 
      wp_alloc l as "H".
      iModIntro.  
-     iApply "Post". 
+     iApply "Post".
+     iSplitL "H".
+     {iExists l.  }    
   (* - iDestruct "Hl" as (p) "[-> Hl]". iDestruct "Hl" as (v) "[Hp Hl]".  *)
 Admitted. 
 
